@@ -40,8 +40,6 @@ public:
 		EdmlSentinel
 	};
 
-	static const WCHAR m_rgwszDml[EdmlSentinel][10];
-
 private:
 	// dml operator
 	EDMLOperator m_edmlop;
@@ -67,6 +65,9 @@ private:
 	// tuple oid column if one exists
 	CColRef *m_pcrTupleOid;
 
+	// Split Update
+	BOOL m_fSplit;
+
 	// private copy ctor
 	CLogicalDML(const CLogicalDML &);
 
@@ -78,7 +79,7 @@ public:
 	CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 				CTableDescriptor *ptabdesc, CColRefArray *colref_array,
 				CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
-				CColRef *pcrSegmentId, CColRef *pcrTupleOid);
+				CColRef *pcrSegmentId, CColRef *pcrTupleOid, BOOL fSplit);
 
 	// dtor
 	virtual ~CLogicalDML();
@@ -151,6 +152,13 @@ public:
 	PcrTupleOid() const
 	{
 		return m_pcrTupleOid;
+	}
+
+	// Is update using split
+	BOOL
+	FSplit() const
+	{
+		return m_fSplit;
 	}
 
 	// operator specific hash function
@@ -244,6 +252,9 @@ public:
 
 	// debug print
 	virtual IOstream &OsPrint(IOstream &) const;
+
+	// Helper function to print DML operator type.
+	static void PrintOperatorType(IOstream &os, EDMLOperator, BOOL fSplit);
 
 };	// class CLogicalDML
 }  // namespace gpopt
