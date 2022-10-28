@@ -649,7 +649,8 @@ ExecDelete(ItemPointer tupleid,
 		   EState *estate,
 		   bool canSetTag,
 		   PlanGenerator planGen,
-		   bool isUpdate)
+		   bool isUpdate,
+		   Oid tableoid)
 {
 	ResultRelInfo *resultRelInfo;
 	Relation	resultRelationDesc;
@@ -671,31 +672,9 @@ ExecDelete(ItemPointer tupleid,
 			 tupleid->ip_posid,
 			 segid);
 
-	/*
-	 * get information on the (current) result relation
-	 */
-	if (estate->es_result_partitions && planGen == PLANGEN_OPTIMIZER)
-	{
-		Assert(estate->es_result_partitions->part->parrelid);
-
-#ifdef USE_ASSERT_CHECKING
-		Oid parent = estate->es_result_partitions->part->parrelid;
-#endif
-
-		/* Obtain part for current tuple. */
-		resultRelInfo = slot_get_partition(planSlot, estate);
-		estate->es_result_relation_info = resultRelInfo;
-
-#ifdef USE_ASSERT_CHECKING
-		Oid part = RelationGetRelid(resultRelInfo->ri_RelationDesc);
-#endif
-
-		Assert(parent != part);
-	}
-	else
-	{
-		resultRelInfo = estate->es_result_relation_info;
-	}
+	resultRelInfo = OidIsValid(tableoid) && planGen == PLANGEN_OPTIMIZER ?
+		targetid_get_partition(tableoid, estate, true) :
+		estate->es_result_relation_info;
 	resultRelationDesc = resultRelInfo->ri_RelationDesc;
 
 	if (planGen == PLANGEN_PLANNER)
@@ -1978,14 +1957,14 @@ ExecModifyTable(ModifyTableState *node)
 					{
 						slot = ExecDelete(tupleid, segid, oldtuple, planSlot,
 										  &node->mt_epqstate, estate, false,
-										  PLANGEN_PLANNER, true /* isUpdate */);
+										  PLANGEN_PLANNER, true /* isUpdate */, InvalidOid);
 					}
 				}
 				break;
 			case CMD_DELETE:
 				slot = ExecDelete(tupleid, segid, oldtuple, planSlot,
 								  &node->mt_epqstate, estate, node->canSetTag,
-								  PLANGEN_PLANNER, false /* isUpdate */);
+								  PLANGEN_PLANNER, false /* isUpdate */, InvalidOid);
 				break;
 			default:
 				elog(ERROR, "unknown operation");
