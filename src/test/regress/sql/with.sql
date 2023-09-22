@@ -1081,5 +1081,12 @@ WITH cte AS (
 	SELECT count(*) c1 FROM d
 ) SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
 
+-- Test shared scan over values with singleQE join
+EXPLAIN (COSTS OFF)
+WITH cte AS (
+	SELECT count(*) c1 FROM (VALUES ( 1, 2 ),( 3, 4 )) v
+)
+SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
+
 RESET optimizer;
 DROP TABLE d;
