@@ -201,6 +201,7 @@ CreateExecutorState(void)
 	estate->currentSubplanLevel = 0;
 	estate->rootSliceId = 0;
 	estate->eliminateAliens = false;
+	estate->sharedScanConsumers = NIL;
 
 	/*
 	 * Return the executor state structure
@@ -2096,6 +2097,24 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 		!(estate->es_top_eflags & EXEC_FLAG_EXPLAIN_ONLY))
 	{
 		ExecSquelchNode(queryDesc->planstate);
+	}
+
+	/*
+	 * If the reading part of SharedScan is in slice 0, then we will not notify
+	 * the writing part that we have finished reading before get the query result.
+	 * However, we will not get the result until the writing part shutdown.
+	 * The writing part will wait for a notify from the reader to shutdown.
+	 * To prevent this we send a notify to writer before we receive result.
+	 */
+	ListCell *cell;
+	foreach(cell, estate->sharedScanConsumers)
+	{
+		ShareInputScanState *state = lfirst(cell);
+		if (state->share_lk_ctxt)
+		{
+			ShareInputScan *sisc = (ShareInputScan *) state->ss.ps.plan;
+			shareinput_reader_notifydone(state->share_lk_ctxt, sisc->share_id);
+		}
 	}
 
 	/*

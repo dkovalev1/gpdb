@@ -1065,3 +1065,26 @@ WITH cte1 AS (
 SELECT * FROM cte1 a JOIN cte1 b USING (c1);
 
 DROP TABLE t1;
+
+-- Test shared scan with consumer on slice 0
+SET optimizer = off;
+--start_ignore
+DROP TABLE IF EXISTS d;
+--end_ignore
+CREATE TABLE d (c1 int, c2 int) DISTRIBUTED BY (c1);
+
+INSERT INTO d (VALUES ( 2, 0 ),( 2 , 0 ));
+
+-- the reading part of shared scan must be in the slice 0, otherwise the test becomes useless
+EXPLAIN (COSTS OFF) WITH cte AS (
+	SELECT c1 FROM d LIMIT 2
+)
+SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
+
+WITH cte AS (
+	SELECT c1 FROM d LIMIT 2
+)
+SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
+
+RESET optimizer;
+DROP TABLE d;
