@@ -2121,6 +2121,11 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		subplan = share_prepared_plan(cteroot, cteplaninfo->shared_plan);
 		subroot = cteplaninfo->subroot;
 
+		/*
+		 * If SharedScan is set to General, the planner might place the producer and
+		 * consumer on different segments, that leading to a deadlock. so in this
+		 * case we perform SharedScan on single segment.
+		 */
 		if (subplan->flow->locustype == CdbLocusType_General)
 		{
 			subplan->flow->locustype = CdbLocusType_SingleQE;
