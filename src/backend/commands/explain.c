@@ -1221,64 +1221,15 @@ ExplainNode(PlanState *planstate, List *ancestors,
 	parentplanstate = es->parentPlanState;
 	es->parentPlanState = planstate;
 
-	if (Gp_role == GP_ROLE_DISPATCH)
+	if (save_currentSlice != NULL && save_currentSlice->gangSize > 0)
 	{
-		/*
-		 * Estimates will have to be scaled down to be per-segment (except in a
-		 * few cases).
-		 */
-		if ((plan->directDispatch).isDirectDispatch)
-		{
-			scaleFactor = 1.0;
-		}
-		else if (plan->flow != NULL && CdbPathLocus_IsBottleneck(*(plan->flow)))
-		{
-			/*
-			 * Data is unified in one place (singleQE or QD), or executed on a
-			 * single segment.  We scale up estimates to make it global.  We
-			 * will later amend this for Motion nodes.
-			 */
-			scaleFactor = 1.0;
-		}
-		else if (plan->flow != NULL && CdbPathLocus_IsSegmentGeneral(*(plan->flow)))
-		{
-			/* Replicated table has full data on every segment */
-			scaleFactor = 1.0;
-		}
-		else if (plan->flow != NULL && es->pstmt->planGen == PLANGEN_PLANNER)
-		{
-			/*
-			 * The plan node is executed on multiple nodes, so scale down the
-			 * number of rows seen by each segment
-			 */
-			scaleFactor = CdbPathLocus_NumSegments(*(plan->flow));
-		}
-		else
-		{
-			/*
-			 * The plan node is executed on multiple nodes, so scale down the
-			 * number of rows seen by each segment
-			 */
-			scaleFactor = getgpsegmentCount();
-		}
+		scaleFactor = (float) save_currentSlice->gangSize;
 	}
 
-	/*
-	 * If this is a Motion node, we're descending into a new slice.
-	 */
-	if (IsA(plan, Motion))
+	if (plan->flow != NULL && CdbPathLocus_IsSegmentGeneral(*(plan->flow)))
 	{
-		Motion	   *pMotion = (Motion *) plan;
-		SliceTable *sliceTable = planstate->state->es_sliceTable;
-
-		if (sliceTable)
-		{
-			es->currentSlice = (Slice *) list_nth(sliceTable->slices,
-												  pMotion->motionID);
-			parentSlice = es->currentSlice->parentIndex == -1 ? NULL :
-						  (Slice *) list_nth(sliceTable->slices,
-											 es->currentSlice->parentIndex);
-		}
+		/* Replicated table has full data on every segment */
+		scaleFactor = 1.0;
 	}
 
 	switch (nodeTag(plan))
@@ -1288,6 +1239,12 @@ ExplainNode(PlanState *planstate, List *ancestors,
 			break;
 		case T_ModifyTable:
 			sname = "ModifyTable";
+
+			if (plan->flow != NULL && CdbPathLocus_IsReplicated(*(plan->flow)))
+			{
+				scaleFactor = 1.0;
+			}
+
 			switch (((ModifyTable *) plan)->operation)
 			{
 				case CMD_INSERT:
@@ -1467,79 +1424,72 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		case T_Motion:
 			{
 				Motion		*pMotion = (Motion *) plan;
+				SliceTable	*sliceTable = planstate->state->es_sliceTable;
 
 				Assert(plan->lefttree);
 				Assert(plan->lefttree->flow);
 
-				motion_snd = es->currentSlice->gangSize;
-				motion_recv = (parentSlice == NULL ? 1 : parentSlice->gangSize);
+				/* Descending into a new slice. */
+				if (sliceTable)
+				{
+					es->currentSlice = (Slice *) list_nth(sliceTable->slices,
+														  pMotion->motionID);
+				}
 
-				/* scale the number of rows by the number of segments sending data */
-				scaleFactor = motion_snd;
+				/* Size of the child slice's gang */
+				motion_snd = es->currentSlice->gangSize;
+				/* Size of the current slice's gang (save_currentSlice->gangSize) */
+				motion_recv = scaleFactor;
 
 				switch (pMotion->motionType)
 				{
 					case MOTIONTYPE_HASH:
 						sname = "Redistribute Motion";
+
+						/*
+						 * scale the number of rows by the number of segments
+						 * sending data
+						 */
+						scaleFactor = motion_snd;
 						break;
 					case MOTIONTYPE_FIXED:
 						if (pMotion->isBroadcast)
 						{
 							sname = "Broadcast Motion";
+
+							/*
+							 * Scale the number of rows by the number of
+							 * segments receiving data, because they were
+							 * multiplied by this number at the planning
+							 * stage. We don't use segments count because the
+							 * number of receivers can be less if we are
+							 * expanding a cluster.
+							 */
+							scaleFactor = motion_recv;
 						}
 						else if (plan->lefttree->flow->locustype == CdbLocusType_Replicated)
 						{
 							sname = "Explicit Gather Motion";
-							scaleFactor = 1;
-							motion_recv = 1;
+							Assert(scaleFactor == 1);
 						}
 						else
 						{
 							sname = "Gather Motion";
-							scaleFactor = 1;
-							motion_recv = 1;
+							Assert(scaleFactor == 1);
 						}
 						break;
 					case MOTIONTYPE_EXPLICIT:
 						sname = "Explicit Redistribute Motion";
-						motion_recv = getgpsegmentCount();
+
+						/*
+						 * scale the number of rows by the number of segments
+						 * sending data
+						 */
+						scaleFactor = motion_snd;
 						break;
 					default:
 						sname = "???";
 						break;
-				}
-
-				if (es->pstmt->planGen == PLANGEN_PLANNER)
-				{
-					Slice	   *slice = es->currentSlice;
-
-					if (slice->directDispatch.isDirectDispatch)
-					{
-						/* Special handling on direct dispatch */
-						motion_snd = list_length(slice->directDispatch.contentIds);
-					}
-					else if (plan->lefttree->flow->flotype == FLOW_SINGLETON)
-					{
-						/* For SINGLETON we always display sender size as 1 */
-						motion_snd = 1;
-					}
-					else
-					{
-						/* Otherwise find out sender size from outer plan */
-						motion_snd = plan->lefttree->flow->numsegments;
-					}
-
-					if (pMotion->motionType == MOTIONTYPE_FIXED &&
-						!pMotion->isBroadcast)
-					{
-						/* In Gather Motion always display receiver size as 1 */
-						motion_recv = 1;
-					}
-					else
-					{
-						/* Otherwise find out receiver size from plan */
-						motion_recv = plan->flow->numsegments;
-					}
 				}
 
 				pname = psprintf("%s %d:%d", sname, motion_snd, motion_recv);
@@ -1850,7 +1800,7 @@ ExplainNode(PlanState *planstate, List *ancestors,
 		{
 			ExplainPropertyFloat("Startup Cost", plan->startup_cost, 2, es);
 			ExplainPropertyFloat("Total Cost", plan->total_cost, 2, es);
-			ExplainPropertyFloat("Plan Rows", plan->plan_rows, 0, es);
+			ExplainPropertyFloat("Plan Rows", ceil(plan->plan_rows / scaleFactor), 0, es);
 			ExplainPropertyInteger("Plan Width", plan->plan_width, es);
 		}
 	}

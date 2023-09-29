@@ -26,7 +26,7 @@ select * FROM ( SELECT 'COL1' TBLNM FROM cte1) A LEFT JOIN cte2 C ON A.TBLNM=C.T
                                  Hash Key: with_test1.i
                                  ->  Seq Scan on with_test1  (cost=0.00..581.00 rows=48100 width=38)
          ->  Hash  (cost=0.06..0.06 rows=1 width=40)
-               ->  Broadcast Motion 1:3  (slice4; segments: 1)  (cost=0.00..0.06 rows=3 width=40)
+               ->  Broadcast Motion 1:3  (slice4; segments: 1)  (cost=0.00..0.06 rows=1 width=40)
                      ->  Aggregate  (cost=6726.74..6726.75 rows=1 width=40)
                            ->  Gather Motion 3:1  (slice3; segments: 3)  (cost=6726.68..6726.73 rows=1 width=8)
                                  ->  Aggregate  (cost=6726.68..6726.69 rows=1 width=8)
@@ -75,7 +75,7 @@ SELECT p.*FROM t1 p JOIN t2 r ON p.isc = r.rc JOIN t2 r1 ON p.iscd = r1.rc LIMIT
                                  Filter: (ri = '101991'::numeric)
                      ->  Hash  (cost=1.02..1.02 rows=1 width=32)
                            ->  Seq Scan on with_test2  (cost=0.00..1.01 rows=1 width=32)
-               ->  Hash  (cost=1.09..1.09 rows=2 width=19)
+               ->  Hash  (cost=1.09..1.09 rows=4 width=19)
                      ->  Subquery Scan on r1  (cost=0.00..1.09 rows=4 width=19)
                            ->  Seq Scan on with_test3 with_test3_1  (cost=0.00..1.05 rows=4 width=19)
                                  Filter: (ri = '101991'::numeric)
