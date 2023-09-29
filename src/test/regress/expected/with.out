@@ -2279,7 +2279,8 @@ WITH cte AS (
   2 |  0
 (1 row)
 
--- Test shared scan over values with singleQE join
+-- Test that conusmer and producer slices are on single segment in case when
+-- Shared Scan is generated over a node with a General locus
 EXPLAIN (COSTS OFF)
 WITH cte AS (
 	SELECT count(*) c1 FROM (VALUES ( 1, 2 ),( 3, 4 )) v
