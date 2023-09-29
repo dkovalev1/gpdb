@@ -1066,9 +1066,14 @@ SELECT * FROM cte1 a JOIN cte1 b USING (c1);
 
 DROP TABLE t1;
 
+<<<<<<< HEAD
 -- Ensure that prefetch is not disabled for HashJoin in case of join at single segment.
 -- Test Shared Scan producer is executed under inner part of join first and the
 -- deadlock between Shared Scans does not occur
+=======
+-- Test that conusmer and producer slices are on single segment in case when
+-- Shared Scan is generated over a node with a General locus
+>>>>>>> f7e6fe018d (change comment)
 SET optimizer = off;
 --start_ignore
 DROP TABLE IF EXISTS d;

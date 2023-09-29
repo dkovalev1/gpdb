@@ -2122,10 +2122,10 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		subroot = cteplaninfo->subroot;
 
 		/*
-		 * If Shared Scan has General locus the planner can place producer slice on
-		 * coordinator and consumer slice on segments. That lead to deadlock.
-		 * To avoid it we ensuring that the shared scan for a node with general
-		 * locus is always performed on a single segment.
+		 * If Shared Scan has General locus the planner can place producer and
+		 * consumer slices different on segments. That lead to deadlock. To avoid it
+		 * we change locus and flow type to CdbLocusType_SingleQE and FLOW_SINGLETON
+		 * respectively for performing Shared Scan on a single segment.
 		 */
 		if (subplan->flow->locustype == CdbLocusType_General)
 		{
