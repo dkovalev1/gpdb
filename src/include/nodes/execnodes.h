@@ -663,7 +663,7 @@ typedef struct EState
 	bool eliminateAliens;
 
 	/* list of Sharedscan consumers in the current slice */
-	List		*sharedScanConsumers;
+	List	   *sharedScanConsumers;
 } EState;
 
 struct PlanState;

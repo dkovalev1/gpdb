@@ -2106,8 +2106,8 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	 * The writing part will wait for a notify from the reader to shutdown.
 	 * To prevent this we send a notify to writer before we receive result.
 	 */
-	ListCell *cell;
-	foreach(cell, estate->sharedScanConsumers)
+	ListCell   *cell;
+	foreach (cell, estate->sharedScanConsumers)
 	{
 		ShareInputScanState *state = lfirst(cell);
 		if (state->share_lk_ctxt)
