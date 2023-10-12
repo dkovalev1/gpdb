@@ -2110,11 +2110,8 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	foreach (cell, estate->sharedScanConsumers)
 	{
 		ShareInputScanState *state = lfirst(cell);
-		if (state->share_lk_ctxt)
-		{
-			ShareInputScan *sisc = (ShareInputScan *) state->ss.ps.plan;
-			shareinput_reader_notifydone(state->share_lk_ctxt, sisc->share_id);
-		}
+		ShareInputScan *sisc = (ShareInputScan *) state->ss.ps.plan;
+		shareinput_reader_notifydone(state->share_lk_ctxt, sisc->share_id);
 	}
 
 	/*
