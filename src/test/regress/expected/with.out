@@ -2278,8 +2278,9 @@ WITH cte AS (
   2 |  0
 (1 row)
 
--- Test shared scan with consumer on slice 0
--- the reading part of shared scan must be in the slice 0, otherwise the test becomes useless
+-- Test cross slice Shared Scan with reader in slice 0. In this case we should send
+-- a notification about the completion of the reading by Shared Scan consumer
+-- before we receive the result of the query otherwise we can get deadlock.
 EXPLAIN (COSTS OFF) WITH cte AS (
 	SELECT c1 FROM d LIMIT 2
 )

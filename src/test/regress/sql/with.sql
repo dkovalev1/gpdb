@@ -1081,8 +1081,9 @@ WITH cte AS (
 	SELECT count(*) c1 FROM d
 ) SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
 
--- Test shared scan with consumer on slice 0
--- the reading part of shared scan must be in the slice 0, otherwise the test becomes useless
+-- Test cross slice Shared Scan with reader in slice 0. In this case we should send
+-- a notification about the completion of the reading by Shared Scan consumer
+-- before we receive the result of the query otherwise we can get deadlock.
 EXPLAIN (COSTS OFF) WITH cte AS (
 	SELECT c1 FROM d LIMIT 2
 )

@@ -2100,11 +2100,13 @@ void mppExecutorFinishup(QueryDesc *queryDesc)
 	}
 
 	/*
-	 * If the reading part of SharedScan is in slice 0, then we will not notify
-	 * the writing part that we have finished reading before get the query result.
-	 * However, we will not get the result until the writing part shutdown.
-	 * The writing part will wait for a notify from the reader to shutdown.
-	 * To prevent this we send a notify to writer before we receive result.
+	 * Notify corresponding writers about completed reading. In case of QD we
+	 * need to do this before processing the results in order to avoid a
+	 * deadlock. Deadlock could occur when the reading part of a cross slice
+	 * Shared Scan was in slice 0 and the writing part was in another slice.
+	 * QE with writing part couldn't finish until the reader sent the
+	 * notification, however that didn't happen because reader at slice 0 used
+	 * to send a notification after all QEs are finished.
 	 */
 	ListCell   *cell;
 	foreach (cell, estate->sharedScanConsumers)
