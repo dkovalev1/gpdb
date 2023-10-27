@@ -662,7 +662,7 @@ typedef struct EState
 	/* Should the executor skip past the alien plan nodes */
 	bool eliminateAliens;
 
-	/* list of Sharedscan consumers in the current slice */
+	/* list of Sharedscan cross-slice consumers in the current slice */
 	List	   *sharedScanConsumers;
 } EState;
 
