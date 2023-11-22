@@ -1274,7 +1274,7 @@ CTranslatorQueryToDXL::TranslateUpdateQueryToDXL()
 
 	// make note of the operator classes used in the distribution key
 	NoteDistributionPolicyOpclasses(rte);
-	
+
 	ULONG ctid_colid = GetSystemColId(SelfItemPointerAttributeNumber);
 	ULONG segmentid_colid = GetSystemColId(GpSegmentIdAttributeNumber);
 

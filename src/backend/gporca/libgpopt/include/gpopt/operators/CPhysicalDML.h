@@ -84,7 +84,8 @@ public:
 	CPhysicalDML(CMemoryPool *mp, CLogicalDML::EDMLOperator edmlop,
 				 CTableDescriptor *ptabdesc, CColRefArray *pdrgpcrSource,
 				 CBitSet *pbsModified, CColRef *pcrAction, CColRef *pcrCtid,
-				 CColRef *pcrSegmentId, CColRef *pcrTupleOid, CColRef *prcTableOid);
+				 CColRef *pcrSegmentId, CColRef *pcrTupleOid,
+				 CColRef *prcTableOid);
 
 	// dtor
 	virtual ~CPhysicalDML();

@@ -1353,10 +1353,10 @@ CXformUtils::PexprLogicalDMLOverProject(
 
 	CExpression *pexprDML = GPOS_NEW(mp) CExpression(
 		mp,
-		GPOS_NEW(mp)
-			CLogicalDML(mp, edmlop, ptabdesc, colref_array,
-						GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/, pcrAction,
-						pcrCtid, pcrSegmentId, NULL /*pcrTupleOid*/, pcrTableOid),
+		GPOS_NEW(mp) CLogicalDML(mp, edmlop, ptabdesc, colref_array,
+								 GPOS_NEW(mp) CBitSet(mp) /*pbsModified*/,
+								 pcrAction, pcrCtid, pcrSegmentId,
+								 NULL /*pcrTupleOid*/, pcrTableOid),
 		pexprProject);
 
 	CExpression *pexprOutput = pexprDML;

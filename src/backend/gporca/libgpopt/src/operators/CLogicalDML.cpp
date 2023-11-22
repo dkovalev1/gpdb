@@ -59,7 +59,8 @@ CLogicalDML::CLogicalDML(CMemoryPool *mp, EDMLOperator edmlop,
 						 CTableDescriptor *ptabdesc,
 						 CColRefArray *pdrgpcrSource, CBitSet *pbsModified,
 						 CColRef *pcrAction, CColRef *pcrCtid,
-						 CColRef *pcrSegmentId, CColRef *pcrTupleOid, CColRef *pcrTableOid)
+						 CColRef *pcrSegmentId, CColRef *pcrTupleOid,
+						 CColRef *pcrTableOid)
 	: CLogical(mp),
 	  m_edmlop(edmlop),
 	  m_ptabdesc(ptabdesc),

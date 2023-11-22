@@ -98,8 +98,7 @@ const CHAR *rgszDMLFileNames[] = {
 	"../data/dxl/minidump/UpdateDistKeyWithNestedJoin.mdp",
 	"../data/dxl/minidump/PartitionedInsert.mdp",
 	"../data/dxl/minidump/PartitionedDelete.mdp",
-	"../data/dxl/minidump/PartitionedUpdate.mdp"
-};
+	"../data/dxl/minidump/PartitionedUpdate.mdp"};
 
 //---------------------------------------------------------------------------
 //	@function:

@@ -5793,9 +5793,10 @@ CTranslatorExprToDXL::PdxlnDML(CExpression *pexpr,
 
 	CDXLDirectDispatchInfo *dxl_direct_dispatch_info =
 		GetDXLDirectDispatchInfo(pexpr);
-	CDXLPhysicalDML *pdxlopDML = GPOS_NEW(m_mp) CDXLPhysicalDML(
-		m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid, ctid_colid,
-		segid_colid, preserve_oids, tuple_oid, tableoid_colid, dxl_direct_dispatch_info);
+	CDXLPhysicalDML *pdxlopDML = GPOS_NEW(m_mp)
+		CDXLPhysicalDML(m_mp, dxl_dml_type, table_descr, pdrgpul, action_colid,
+						ctid_colid, segid_colid, preserve_oids, tuple_oid,
+						tableoid_colid, dxl_direct_dispatch_info);
 
 	// project list
 	CColRefSet *pcrsOutput = pexpr->Prpp()->PcrsRequired();
