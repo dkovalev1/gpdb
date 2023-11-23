@@ -1162,6 +1162,10 @@ SELECT * FROM issue_14982_t1_part_range t1, issue_14982_t2_part_range t2
   WHERE t1.a = t2.a AND t1.b = t2.b AND t2.b |=| 1;
 
 DROP SCHEMA issue_14982 CASCADE;
+-- restore environment
+SET enable_hashjoin TO 'OFF';
+SET enable_mergejoin TO 'ON';
+SET search_path TO partition_pruning;
 
 -- Tests of partition pruning for case when default partition was exchanged without validation
 -- and contains rows, that satisfy constraints of other partition
