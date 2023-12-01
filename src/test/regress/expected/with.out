@@ -2269,7 +2269,6 @@ SET optimizer = off;
 DROP TABLE IF EXISTS d;
 --end_ignore
 CREATE TABLE d (c1 int, c2 int) DISTRIBUTED BY (c1);
-
 INSERT INTO d VALUES ( 2, 0 ),( 2, 0 );
 WITH cte AS (
 	SELECT count(*) c1 FROM d
@@ -2286,28 +2285,34 @@ WITH cte AS (
 	SELECT count(*) c1 FROM (VALUES ( 1, 2 ),( 3, 4 )) v
 )
 SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
-                                    QUERY PLAN                                    
-----------------------------------------------------------------------------------
+                                QUERY PLAN                                 
+---------------------------------------------------------------------------
  Hash Join
-   Hash Cond: (b.c1 = share0_ref1.c1)
+   Hash Cond: (b.c1 = (count(*)))
    ->  Subquery Scan on b
          ->  Limit
-               ->  Gather Motion 3:1  (slice2; segments: 3)
+               ->  Gather Motion 3:1  (slice1; segments: 3)
                      ->  Limit
                            ->  Hash Join
-                                 Hash Cond: (d.c1 = share0_ref2.c1)
+                                 Hash Cond: (d.c1 = (count(*)))
                                  ->  Seq Scan on d
                                  ->  Hash
-                                       ->  Redistribute Motion 1:3  (slice1)
-                                             Hash Key: share0_ref2.c1
-                                             ->  Shared Scan (share slice:id 1:0)
+                                       ->  Aggregate
+                                             ->  Values Scan on "*VALUES*"
    ->  Hash
-         ->  Shared Scan (share slice:id 0:0)
-               ->  Materialize
-                     ->  Aggregate
-                           ->  Values Scan on "*VALUES*"
+         ->  Aggregate
+               ->  Values Scan on "*VALUES*_1"
  Optimizer: Postgres query optimizer
-(19 rows)
+(16 rows)
+
+WITH cte AS (
+    SELECT count(*) c1 FROM (VALUES ( 1, 2 ),( 3, 4 )) v
+)
+SELECT * FROM cte a JOIN (SELECT * FROM d JOIN cte USING (c1) LIMIT 1) b USING (c1);
+ c1 | c2 
+----+----
+  2 |  0
+(1 row)
 
 RESET optimizer;
 DROP TABLE d;

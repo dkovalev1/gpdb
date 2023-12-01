@@ -2089,7 +2089,7 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 		 * subplan will not be used by InitPlans, so that they can be shared
 		 * if this CTE is referenced multiple times (excluding in InitPlans).
 		 */
-		if (cteplaninfo->shared_plan == NULL)
+		if (cteplaninfo->subplan == NULL)
 		{
 			PlannerConfig *config = CopyPlannerConfig(root->config);
 
@@ -2110,28 +2110,30 @@ set_cte_pathlist(PlannerInfo *root, RelOptInfo *rel, RangeTblEntry *rte)
 			subplan = subquery_planner(cteroot->glob, subquery, cteroot, cte->cterecursive,
 									   tuple_fraction, &subroot, config);
 
-			cteplaninfo->shared_plan = prepare_plan_for_sharing(cteroot, subplan);
+			if (!CdbPathLocus_IsGeneral(*subplan->flow))
+				cteplaninfo->subplan = prepare_plan_for_sharing(cteroot, subplan);
+			else
+				cteplaninfo->subplan = subplan;
+
 			cteplaninfo->subroot = subroot;
 		}
 
 		/*
 		 * Create another ShareInputScan to reference the already-created
-		 * subplan.
+		 * subplan if not avoiding sharing. Sharing General subplan may
+		 * lead to deadlock when executed with 1-gang and joined with n-gang.
 		 */
-		subplan = share_prepared_plan(cteroot, cteplaninfo->shared_plan);
-		subroot = cteplaninfo->subroot;
+		if (!CdbPathLocus_IsGeneral(*cteplaninfo->subplan->flow))
+			subplan = share_prepared_plan(cteroot, cteplaninfo->subplan);
+		else if (subplan == NULL)
+			/*
+			 * If we are not sharing and subplan was created just now, use it.
+			 * Otherwise, make a copy of it to avoid construction of DAG
+			 * instead of a tree.
+			 */
+			subplan = copyObject(cteplaninfo->subplan);
 
-		/*
-		 * If Shared Scan has General locus the planner can place producer and
-		 * consumer slices on different segments. That lead to deadlock. To avoid it
-		 * we change locus and flow type for performing Shared Scan on a single
-		 * segment.
-		 */
-		if (subplan->flow->locustype == CdbLocusType_General)
-		{
-			subplan->flow->locustype = CdbLocusType_SingleQE;
-			subplan->flow->flotype = FLOW_SINGLETON;
-		}
+		subroot = cteplaninfo->subroot;
 	}
 
 	pathkeys = subroot->query_pathkeys;
