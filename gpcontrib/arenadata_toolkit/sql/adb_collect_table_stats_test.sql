@@ -90,3 +90,4 @@ ORDER BY oid;
 DROP TABLE part_table;
 DROP FUNCTION remove_partition_from_db_files_history();
 DROP EXTENSION arenadata_toolkit;
+DROP SCHEMA arenadata_toolkit CASCADE;
