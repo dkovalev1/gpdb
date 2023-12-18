@@ -122,6 +122,21 @@ BEGIN
 		RETURN NEXT 'db_files_history_backup check';
 	END IF;
 
+-- Cleanup before next step
+	DROP EXTENSION arenadata_toolkit;
+
+-- Check create extension with the lastest version after current was installed and dropped
+	CREATE EXTENSION arenadata_toolkit;
+
+-- Check the result
+	IF EXISTS (SELECT 1
+			   FROM pg_available_extensions
+			   WHERE name='arenadata_toolkit' AND
+			         default_version=installed_version)
+	THEN
+		RETURN NEXT 'create the latest check';
+	END IF;
+
 -- Cleanup
 	DROP EXTENSION arenadata_toolkit;
 	DROP SCHEMA arenadata_toolkit CASCADE;
@@ -130,10 +145,10 @@ END$$
 LANGUAGE plpgsql VOLATILE
 EXECUTE ON MASTER;
 
-SELECT do_upgrade_test_for_arenadata_toolkit('1.0', '1.1');
-SELECT do_upgrade_test_for_arenadata_toolkit('1.1', '1.2');
-SELECT do_upgrade_test_for_arenadata_toolkit('1.2', '1.3');
-SELECT do_upgrade_test_for_arenadata_toolkit('1.3', '1.4');
+SELECT do_upgrade_test_for_arenadata_toolkit('1.0', '1.1') ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.1', '1.2') ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.2', '1.3') ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.3', '1.4') ORDER BY 1;
 
 -- Cleanup
 DROP FUNCTION do_upgrade_test_for_arenadata_toolkit(TEXT, TEXT);
