@@ -6,98 +6,100 @@ AS $$
 BEGIN
 
 	IF EXISTS (SELECT 1 FROM pg_tables
-			   WHERE schemaname = 'arenadata_toolkit' AND tablename = 'db_files_current')
+			   WHERE schemaname = 'arenadata_toolkit' AND
+			         tablename = 'db_files_current')
+	AND NOT EXISTS (SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema='arenadata_toolkit' AND
+					      table_name='db_files_current' AND
+					      column_name='tablespace_location')
 	THEN
-		IF NOT EXISTS (SELECT 1
-					   FROM information_schema.columns
-					   WHERE table_schema='arenadata_toolkit' AND
-					         table_name='db_files_current' AND
-					         column_name='tablespace_location')
-		THEN
-			ALTER TABLE arenadata_toolkit.db_files_current
-			ADD COLUMN tablespace_location TEXT;
-		END IF;
+		ALTER TABLE arenadata_toolkit.db_files_current
+		ADD COLUMN tablespace_location TEXT;
 	END IF;
 
 	DROP TABLE IF EXISTS pg_temp.db_files_current;
 
 	IF EXISTS (SELECT 1 FROM pg_views
-			   WHERE schemaname = 'arenadata_toolkit' AND viewname = '__db_files_current')
+			   WHERE schemaname = 'arenadata_toolkit' AND
+			         viewname = '__db_files_current')
+	AND NOT EXISTS (SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema='arenadata_toolkit' AND
+					      table_name='__db_files_current' AND
+					      column_name='tablespace_location')
 	THEN
-		IF NOT EXISTS (SELECT 1
-					   FROM information_schema.columns
-					   WHERE table_schema='arenadata_toolkit' AND
-					         table_name='__db_files_current' AND
-					         column_name='tablespace_location')
-		THEN
-			CREATE OR REPLACE VIEW arenadata_toolkit.__db_files_current
-			AS
-			SELECT
-				c.oid AS oid,
-				c.relname AS table_name,
-				n.nspname AS table_schema,
-				c.relkind AS type,
-				c.relstorage AS storage,
-				d.datname AS table_database,
-				t.spcname AS table_tablespace,
-				dbf.segindex AS content,
-				dbf.segment_preferred_role AS segment_preferred_role,
-				dbf.hostname AS hostname,
-				dbf.address AS address,
-				dbf.full_path AS file,
-				dbf.size AS file_size,
-				dbf.modified_dttm AS modifiedtime,
-				dbf.changed_dttm AS changedtime,
-				CASE
-					WHEN 'pg_default' = t.spcname THEN gpconf.datadir || '/base'
-					WHEN 'pg_global' = t.spcname THEN gpconf.datadir || '/global'
-					ELSE (SELECT tblspc_loc
-						  FROM gp_tablespace_segment_location(t.oid)
-						  WHERE gp_segment_id = dbf.segindex)
-					END AS tablespace_location
-				FROM arenadata_toolkit.__db_segment_files dbf
-						 LEFT JOIN pg_class AS c
-								   ON c.oid = dbf.reloid
-						 LEFT JOIN pg_namespace n
-								   ON c.relnamespace = n.oid
-						 LEFT JOIN pg_tablespace t
-								   ON dbf.tablespace_oid = t.oid
-						 LEFT JOIN pg_database d
-								   ON dbf.datoid = d.oid
-						 LEFT JOIN gp_segment_configuration AS gpconf
-								   ON dbf.dbid = gpconf.dbid;
-		END IF;
+		CREATE OR REPLACE VIEW arenadata_toolkit.__db_files_current
+		AS
+		SELECT
+			c.oid AS oid,
+			c.relname AS table_name,
+			n.nspname AS table_schema,
+			c.relkind AS type,
+			c.relstorage AS storage,
+			d.datname AS table_database,
+			t.spcname AS table_tablespace,
+			dbf.segindex AS content,
+			dbf.segment_preferred_role AS segment_preferred_role,
+			dbf.hostname AS hostname,
+			dbf.address AS address,
+			dbf.full_path AS file,
+			dbf.size AS file_size,
+			dbf.modified_dttm AS modifiedtime,
+			dbf.changed_dttm AS changedtime,
+			CASE
+				WHEN 'pg_default' = t.spcname THEN gpconf.datadir || '/base'
+				WHEN 'pg_global' = t.spcname THEN gpconf.datadir || '/global'
+				ELSE (SELECT tblspc_loc
+					  FROM gp_tablespace_segment_location(t.oid)
+					  WHERE gp_segment_id = dbf.segindex)
+				END AS tablespace_location
+		FROM arenadata_toolkit.__db_segment_files dbf
+		LEFT JOIN pg_class c ON c.oid = dbf.reloid
+		LEFT JOIN pg_namespace n ON c.relnamespace = n.oid
+		LEFT JOIN pg_tablespace t ON dbf.tablespace_oid = t.oid
+		LEFT JOIN pg_database d ON dbf.datoid = d.oid
+		LEFT JOIN gp_segment_configuration gpconf ON dbf.dbid = gpconf.dbid;
 	END IF;
 
 	IF EXISTS (SELECT 1 FROM pg_views
-			   WHERE schemaname = 'arenadata_toolkit' AND viewname = '__db_files_current_unmapped')
+			   WHERE schemaname = 'arenadata_toolkit' AND
+			         viewname = '__db_files_current_unmapped')
+	AND NOT EXISTS (SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema='arenadata_toolkit' AND
+					      table_name='__db_files_current_unmapped' AND
+					      column_name='tablespace_location')
 	THEN
-		IF NOT EXISTS (SELECT 1
-					   FROM information_schema.columns
-					   WHERE table_schema='arenadata_toolkit' AND
-					         table_name='__db_files_current_unmapped' AND
-					         column_name='tablespace_location')
-		THEN
-			CREATE OR REPLACE VIEW arenadata_toolkit.__db_files_current_unmapped
-			AS
-			SELECT
-				v.table_database,
-				v.table_tablespace,
-				v.content,
-				v.segment_preferred_role,
-				v.hostname,
-				v.address,
-				v.file,
-				v.file_size,
-				v.tablespace_location
-			FROM arenadata_toolkit.__db_files_current v
-			WHERE v.oid IS NULL;
-		END IF;
+		CREATE OR REPLACE VIEW arenadata_toolkit.__db_files_current_unmapped
+		AS
+		SELECT
+			v.table_database,
+			v.table_tablespace,
+			v.content,
+			v.segment_preferred_role,
+			v.hostname,
+			v.address,
+			v.file,
+			v.file_size,
+			v.tablespace_location
+		FROM arenadata_toolkit.__db_files_current v
+		WHERE v.oid IS NULL;
 	END IF;
 
-	EXECUTE FORMAT($fmt$ALTER TABLE IF EXISTS arenadata_toolkit.db_files_history
-						RENAME TO db_files_history_backup_%1$s;$fmt$,
-		to_char(now(), 'YYYYMMDD"t"HH24MISS'));
+	IF EXISTS (SELECT 1 FROM pg_tables
+			   WHERE schemaname = 'arenadata_toolkit' AND
+			         tablename = 'db_files_history')
+	AND NOT EXISTS (SELECT 1
+					FROM information_schema.columns
+					WHERE table_schema='arenadata_toolkit' AND
+					      table_name='db_files_history' AND
+					      column_name='tablespace_location')
+	THEN
+		EXECUTE FORMAT($fmt$ALTER TABLE arenadata_toolkit.db_files_history
+							RENAME TO db_files_history_backup_%1$s;$fmt$,
+			to_char(now(), 'YYYYMMDD"t"HH24MISS'));
+	END IF;
 
 END$$
 LANGUAGE plpgsql VOLATILE

@@ -17,9 +17,11 @@ BEGIN
 	CREATE EXTENSION arenadata_toolkit VERSION '1.0';
 	IF (from_version != '1.0')
 	THEN
-		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit UPDATE TO %1$I;$fmt$, from_version);
+		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
+							UPDATE TO %1$I;$fmt$, from_version);
 	END IF;
-	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit UPDATE TO %1$I;$fmt$, to_version);
+	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
+						UPDATE TO %1$I;$fmt$, to_version);
 
 -- Check the result
 	IF to_version = (SELECT extversion
@@ -37,10 +39,12 @@ BEGIN
 	CREATE EXTENSION arenadata_toolkit VERSION '1.0';
 	IF (from_version != '1.0')
 	THEN
-		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit UPDATE TO %1$I;$fmt$, from_version);
+		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
+							UPDATE TO %1$I;$fmt$, from_version);
 	END IF;
 	PERFORM arenadata_toolkit.adb_create_tables();
-	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit UPDATE TO %1$I;$fmt$, to_version);
+	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
+						UPDATE TO %1$I;$fmt$, to_version);
 
 -- Check the result
 	IF to_version = (SELECT extversion
@@ -58,11 +62,13 @@ BEGIN
 	CREATE EXTENSION arenadata_toolkit VERSION '1.0';
 	IF (from_version != '1.0')
 	THEN
-		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit UPDATE TO %1$I;$fmt$, from_version);
+		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
+						UPDATE TO %1$I;$fmt$, from_version);
 	END IF;
 	PERFORM arenadata_toolkit.adb_create_tables();
 	PERFORM arenadata_toolkit.adb_collect_table_stats();
-	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit UPDATE TO %1$I;$fmt$, to_version);
+	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
+						UPDATE TO %1$I;$fmt$, to_version);
 
 -- Check the result
 	IF to_version = (SELECT extversion

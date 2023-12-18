@@ -33,11 +33,12 @@ SELECT
 		ELSE files.tablespace_location
 	END AS tablespace_location
 FROM arenadata_toolkit.__db_files_current files
-LEFT JOIN gp_segment_configuration gpconf ON gpconf.content = files.content AND
-										     gpconf.preferred_role = files.segment_preferred_role
+LEFT JOIN gp_segment_configuration gpconf
+		  ON gpconf.content = files.content AND
+		  gpconf.preferred_role = files.segment_preferred_role
 WHERE table_name IN ('table_at_pg_default',
 					 'table_at_custom_tblspc',
-					 'gp_segment_configuration')
+					 'gp_segment_configuration') -- example of table at pg_global
 ORDER BY table_name, content;
 
 SELECT arenadata_toolkit.adb_collect_table_stats();
@@ -56,11 +57,12 @@ SELECT
 		ELSE files.tablespace_location
 	END AS tablespace_location
 FROM arenadata_toolkit.db_files_current files
-LEFT JOIN gp_segment_configuration gpconf ON gpconf.content = files.content AND
-										     gpconf.preferred_role = files.segment_preferred_role
+LEFT JOIN gp_segment_configuration gpconf
+		  ON gpconf.content = files.content AND
+		  gpconf.preferred_role = files.segment_preferred_role
 WHERE table_name IN ('table_at_pg_default',
 					 'table_at_custom_tblspc',
-					 'gp_segment_configuration')
+					 'gp_segment_configuration') -- example of table at pg_global
 ORDER BY table_name, content;
 
 SELECT
@@ -77,11 +79,12 @@ SELECT
 		ELSE files.tablespace_location
 	END AS tablespace_location
 FROM arenadata_toolkit.db_files_history files
-LEFT JOIN gp_segment_configuration gpconf ON gpconf.content = files.content AND
-										     gpconf.preferred_role = files.segment_preferred_role
+LEFT JOIN gp_segment_configuration gpconf
+		  ON gpconf.content = files.content AND
+		  gpconf.preferred_role = files.segment_preferred_role
 WHERE table_name IN ('table_at_pg_default',
 					 'table_at_custom_tblspc',
-					 'gp_segment_configuration')
+					 'gp_segment_configuration') -- example of table at pg_global
 ORDER BY table_name, content;
 
 -- Cleanup
