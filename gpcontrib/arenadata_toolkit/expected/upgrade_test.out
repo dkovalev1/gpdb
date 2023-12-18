@@ -124,7 +124,7 @@ BEGIN
 -- Cleanup before next step
 	DROP EXTENSION arenadata_toolkit;
 
--- Check create extension with the lastest version after current was installed and dropped
+-- Check create extension with the latest version after current was installed and dropped
 	CREATE EXTENSION arenadata_toolkit;
 
 -- Check the result
