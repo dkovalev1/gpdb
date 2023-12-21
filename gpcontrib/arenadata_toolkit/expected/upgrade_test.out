@@ -27,7 +27,7 @@ BEGIN
 				     FROM pg_extension
 				     WHERE extname='arenadata_toolkit')
 	THEN
-		RETURN NEXT 'only alter check';
+		RETURN NEXT from_version || ': only alter check';
 	END IF;
 
 -- Cleanup before next step
@@ -50,7 +50,7 @@ BEGIN
 				     FROM pg_extension
 				     WHERE extname='arenadata_toolkit')
 	THEN
-		RETURN NEXT 'alter and create_tables check';
+		RETURN NEXT from_version || ': alter and create_tables check';
 	END IF;
 
 -- Cleanup before next step
@@ -74,7 +74,7 @@ BEGIN
 				     FROM pg_extension
 				     WHERE extname='arenadata_toolkit')
 	THEN
-		RETURN NEXT 'alter, create_tables and collect_table_stats check';
+		RETURN NEXT from_version || ': alter, create_tables and collect_table_stats check';
 	END IF;
 
 -- Check field "tablespace_location" and table "db_files_history_backup_YYYYMMDDtHHMMSS"
@@ -87,7 +87,7 @@ BEGIN
 			         table_name='db_files_current' AND
 			         column_name='tablespace_location')
 	THEN
-		RETURN NEXT 'tablespace_location at arenadata_toolkit.db_files_current check';
+		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.db_files_current check';
 	END IF;
 	IF EXISTS (SELECT 1
 			   FROM information_schema.columns
@@ -95,7 +95,7 @@ BEGIN
 			         table_name='__db_files_current' AND
 			         column_name='tablespace_location')
 	THEN
-		RETURN NEXT 'tablespace_location at arenadata_toolkit.__db_files_current check';
+		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.__db_files_current check';
 	END IF;
 	IF EXISTS (SELECT 1
 				   FROM information_schema.columns
@@ -103,7 +103,7 @@ BEGIN
 				         table_name='__db_files_current_unmapped' AND
 				         column_name='tablespace_location')
 	THEN
-		RETURN NEXT 'tablespace_location at arenadata_toolkit.__db_files_current_unmapped check';
+		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.__db_files_current_unmapped check';
 	END IF;
 	IF EXISTS (SELECT 1
 			   FROM information_schema.columns
@@ -111,14 +111,14 @@ BEGIN
 			         table_name='db_files_history' AND
 			         column_name='tablespace_location')
 	THEN
-		RETURN NEXT 'tablespace_location at arenadata_toolkit.db_files_history check';
+		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.db_files_history check';
 	END IF;
 	IF EXISTS (SELECT 1
 			   FROM pg_tables
 			   WHERE schemaname='arenadata_toolkit' AND
 			         tablename like 'db_files_history_backup%')
 	THEN
-		RETURN NEXT 'db_files_history_backup check';
+		RETURN NEXT from_version || ': db_files_history_backup check';
 	END IF;
 
 -- Cleanup before next step
@@ -126,6 +126,8 @@ BEGIN
 
 -- Check create extension with the latest version after current was installed and dropped
 	CREATE EXTENSION arenadata_toolkit;
+	PERFORM arenadata_toolkit.adb_create_tables();
+	PERFORM arenadata_toolkit.adb_collect_table_stats();
 
 -- Check the result
 	IF EXISTS (SELECT 1
@@ -133,7 +135,7 @@ BEGIN
 			   WHERE name='arenadata_toolkit' AND
 			         default_version=installed_version)
 	THEN
-		RETURN NEXT 'create the latest check';
+		RETURN NEXT from_version || ': create the latest check';
 	END IF;
 
 -- Cleanup
@@ -141,49 +143,69 @@ BEGIN
 	DROP SCHEMA arenadata_toolkit CASCADE;
 
 END$$
-LANGUAGE plpgsql VOLATILE
-EXECUTE ON MASTER;
-SELECT do_upgrade_test_for_arenadata_toolkit('1.0', '1.1') ORDER BY 1;
-       do_upgrade_test_for_arenadata_toolkit        
-----------------------------------------------------
- alter and create_tables check
- alter, create_tables and collect_table_stats check
- create the latest check
- only alter check
-(4 rows)
-
-SELECT do_upgrade_test_for_arenadata_toolkit('1.1', '1.2') ORDER BY 1;
-       do_upgrade_test_for_arenadata_toolkit        
-----------------------------------------------------
- alter and create_tables check
- alter, create_tables and collect_table_stats check
- create the latest check
- only alter check
-(4 rows)
-
-SELECT do_upgrade_test_for_arenadata_toolkit('1.2', '1.3') ORDER BY 1;
-       do_upgrade_test_for_arenadata_toolkit        
-----------------------------------------------------
- alter and create_tables check
- alter, create_tables and collect_table_stats check
- create the latest check
- only alter check
-(4 rows)
-
-SELECT do_upgrade_test_for_arenadata_toolkit('1.3', '1.4') ORDER BY 1;
-                   do_upgrade_test_for_arenadata_toolkit                    
-----------------------------------------------------------------------------
- alter and create_tables check
- alter, create_tables and collect_table_stats check
- create the latest check
- db_files_history_backup check
- only alter check
- tablespace_location at arenadata_toolkit.__db_files_current check
- tablespace_location at arenadata_toolkit.db_files_current check
- tablespace_location at arenadata_toolkit.__db_files_current_unmapped check
- tablespace_location at arenadata_toolkit.db_files_history check
-(9 rows)
+LANGUAGE plpgsql;
+CREATE FUNCTION do_test_for_each_versions()
+RETURNS setof TEXT
+AS $$
+DECLARE
+	version RECORD;
+BEGIN
+	FOR version IN
+		SELECT *
+		FROM (VALUES ('1.0'),('1.1'),('1.2'),('1.3'))
+			AS from_versions
+	LOOP
+		RETURN QUERY SELECT do_upgrade_test_for_arenadata_toolkit(
+								version.column1::TEXT,
+								(SELECT default_version
+								 FROM pg_available_extensions
+								 WHERE name = 'arenadata_toolkit'))
+					 ORDER BY 1;
+	END LOOP;
+END$$
+LANGUAGE plpgsql;
+SELECT do_test_for_each_versions() ORDER BY 1;
+                            do_test_for_each_versions                            
+---------------------------------------------------------------------------------
+ 1.0: alter and create_tables check
+ 1.0: alter, create_tables and collect_table_stats check
+ 1.0: create the latest check
+ 1.0: db_files_history_backup check
+ 1.0: only alter check
+ 1.0: tablespace_location at arenadata_toolkit.__db_files_current check
+ 1.0: tablespace_location at arenadata_toolkit.db_files_current check
+ 1.0: tablespace_location at arenadata_toolkit.__db_files_current_unmapped check
+ 1.0: tablespace_location at arenadata_toolkit.db_files_history check
+ 1.1: alter and create_tables check
+ 1.1: alter, create_tables and collect_table_stats check
+ 1.1: create the latest check
+ 1.1: db_files_history_backup check
+ 1.1: only alter check
+ 1.1: tablespace_location at arenadata_toolkit.__db_files_current check
+ 1.1: tablespace_location at arenadata_toolkit.db_files_current check
+ 1.1: tablespace_location at arenadata_toolkit.__db_files_current_unmapped check
+ 1.1: tablespace_location at arenadata_toolkit.db_files_history check
+ 1.2: alter and create_tables check
+ 1.2: alter, create_tables and collect_table_stats check
+ 1.2: create the latest check
+ 1.2: db_files_history_backup check
+ 1.2: only alter check
+ 1.2: tablespace_location at arenadata_toolkit.__db_files_current check
+ 1.2: tablespace_location at arenadata_toolkit.db_files_current check
+ 1.2: tablespace_location at arenadata_toolkit.__db_files_current_unmapped check
+ 1.2: tablespace_location at arenadata_toolkit.db_files_history check
+ 1.3: alter and create_tables check
+ 1.3: alter, create_tables and collect_table_stats check
+ 1.3: create the latest check
+ 1.3: db_files_history_backup check
+ 1.3: only alter check
+ 1.3: tablespace_location at arenadata_toolkit.__db_files_current check
+ 1.3: tablespace_location at arenadata_toolkit.db_files_current check
+ 1.3: tablespace_location at arenadata_toolkit.__db_files_current_unmapped check
+ 1.3: tablespace_location at arenadata_toolkit.db_files_history check
+(36 rows)
 
 -- Cleanup
+DROP FUNCTION do_test_for_each_versions();
 DROP FUNCTION do_upgrade_test_for_arenadata_toolkit(TEXT, TEXT);
 RESET client_min_messages;

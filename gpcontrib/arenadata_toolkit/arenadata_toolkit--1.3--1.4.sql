@@ -20,7 +20,7 @@ DO $$
 BEGIN
 	IF EXISTS (SELECT 1
 			   FROM pg_tables
-			   WHERE schemaname = 'pg_temp' AND
+			   WHERE schemaname LIKE 'pg_temp%' AND
 			         tablename = 'db_files_current')
 	THEN
 		DROP TABLE pg_temp.db_files_current;
@@ -113,7 +113,7 @@ BEGIN
 	THEN
 		EXECUTE FORMAT($fmt$ALTER TABLE arenadata_toolkit.db_files_history
 							RENAME TO %1$I;$fmt$,
-			to_char(now(), '"db_files_history_backup_"YYYYMMDD"t"HH24MISS'));
+			to_char(now(), '"db_files_history_backup_"YYYYMMDD"T"HH24MISS'));
 	END IF;
 END $$;
 
