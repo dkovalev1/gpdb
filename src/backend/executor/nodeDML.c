@@ -59,17 +59,16 @@ ExecDML(DMLState *node)
 	}
 
 	bool isnull = false;
-	int action = DatumGetUInt32(slot_getattr(slot, plannode->actionColIdx, &isnull));
-	Assert(!isnull);
-
-	bool isUpdate = false;
-	if (node->ps.state->es_plannedstmt->commandType == CMD_UPDATE)
+	int action = -1;
+	bool isUpdate = node->ps.state->es_plannedstmt->commandType == CMD_UPDATE;
+	// if it's not in place update
+	if (AttributeNumberIsValid(plannode->actionColIdx))
 	{
-		isUpdate = true;
+		action = DatumGetUInt32(
+				slot_getattr(slot, plannode->actionColIdx, &isnull));
+		Assert(!isnull);
+		Assert(action == DML_INSERT || action == DML_DELETE);
 	}
-
-	Assert(action == DML_INSERT || action == DML_DELETE);
-
 
 	/*
 	 * Reset per-tuple memory context to free any expression evaluation
@@ -116,6 +115,13 @@ ExecDML(DMLState *node)
 		 * es_result_relations will contain the only relation.
 		 */
 		node->ps.state->es_result_relation_info = relInfo;
+
+		/*
+		 * Perform partition selection for in place update
+		 */
+		if (isUpdate && !AttributeNumberIsValid(plannode->actionColIdx))
+			node->ps.state->es_result_relation_info =
+					slot_get_partition(node->cleanedUpSlot, node->ps.state);
 	}
 	/* GPDB_91_MERGE_FIXME:
 	 * This kind of node is used by ORCA only. If in the future ORCA still uses
@@ -155,7 +161,7 @@ ExecDML(DMLState *node)
 				   isUpdate,
 				   InvalidOid);
 	}
-	else /* DML_DELETE */
+	else if (action == DML_DELETE)
 	{
 		int32 segid = GpIdentity.segindex;
 		Datum ctid = slot_getattr(slot, plannode->ctidColIdx, &isnull);
@@ -182,6 +188,25 @@ ExecDML(DMLState *node)
 				   !isUpdate, /* GPDB_91_MERGE_FIXME: where to get canSetTag? */
 				   PLANGEN_OPTIMIZER /* Plan origin */,
 				   isUpdate);
+	}
+	else /* UPDATE */
+	{
+		int32 segid = GpIdentity.segindex;
+
+		Datum ctid = slot_getattr(slot, plannode->ctidColIdx, &isnull);
+
+		ItemPointer  tupleid = (ItemPointer) DatumGetPointer(ctid);
+		ItemPointerData tuple_ctid = *tupleid;
+		tupleid = &tuple_ctid;
+		ExecUpdate(tupleid,
+				   segid,
+				   NULL, //oldtuple
+				   node->cleanedUpSlot,
+				   NULL, //planSlot
+				   NULL /* DestReceiver */,
+				   node->ps.state,
+				   true,
+				   PLANGEN_OPTIMIZER);
 	}
 
 	return slot;
@@ -261,6 +286,7 @@ ExecInitDML(DML *node, EState *estate, int eflags)
 	dmlstate->junkfilter = ExecInitJunkFilter(node->plan.targetlist,
 			dmlstate->ps.state->es_result_relation_info->ri_RelationDesc->rd_att->tdhasoid,
 			dmlstate->cleanedUpSlot);
+	estate->es_result_relation_info->ri_junkFilter = dmlstate->junkfilter;
 
 	/*
 	 * We don't maintain typmod in the targetlist, so we should fixup the

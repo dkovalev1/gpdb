@@ -375,7 +375,8 @@ UPDATE 1
 END
 -- session 2 should throw error and not PANIC
 2<:  <... completed>
-ERROR:  tuple to be updated was already moved to another segment due to concurrent update  (seg1 127.0.1.1:6003 pid=116712)
+ERROR:  could not serialize access due to concurrent update  (seg1 172.17.0.2:6003 pid=86009)
+HINT:  Use PostgreSQL Planner instead of Optimizer for this query via optimizer=off GUC setting
 
 1: drop table t_epq_subplans;
 DROP
