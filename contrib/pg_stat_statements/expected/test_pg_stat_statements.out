@@ -8,14 +8,14 @@ CREATE TABLE table_test_pg_stat_statements
 )
 DISTRIBUTED BY (item1);
 SELECT   
-    sum(item4) as sum_item1
+    SUM(item4) AS sum_item1
    ,item2
-   ,grouping(item1)+grouping(item2) as item_1_2_grouping
-from
+   ,GROUPING(item1)+GROUPING(item2) AS item_1_2_grouping
+FROM
     table_test_pg_stat_statements
-where
+WHERE
     item3 = 0
-group by rollup(item1, item2);
+GROUP BY ROLLUP(item1, item2);
  sum_item1 | item2 | item_1_2_grouping 
 -----------+-------+-------------------
            |       |                 2
