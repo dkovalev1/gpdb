@@ -2,10 +2,9 @@
 
 DO $$
 BEGIN
-	IF (SELECT c.oid IS NOT NULL
-		   AND a.attrelid IS NULL
+	IF (SELECT a.attrelid IS NULL
 		FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
 		LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND
 		                            a.attname = 'tablespace_location'
 		WHERE c.relname = 'db_files_current' AND
@@ -29,10 +28,9 @@ END $$;
 
 DO $$
 BEGIN
-	IF (SELECT c.oid IS NOT NULL
-		   AND a.attrelid IS NULL
+	IF (SELECT a.attrelid IS NULL
 		FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
 		LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND
 		                            a.attname = 'tablespace_location'
 		WHERE c.relname = '__db_files_current' AND
@@ -74,10 +72,9 @@ END $$;
 
 DO $$
 BEGIN
-	IF (SELECT c.oid IS NOT NULL
-		   AND a.attrelid IS NULL
+	IF (SELECT a.attrelid IS NULL
 		FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
 		LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND
 		                            a.attname = 'tablespace_location'
 		WHERE c.relname = '__db_files_current_unmapped' AND
@@ -102,10 +99,9 @@ END $$;
 
 DO $$
 BEGIN
-	IF (SELECT c.oid IS NOT NULL
-		   AND a.attrelid IS NULL
+	IF (SELECT a.attrelid IS NULL
 		FROM pg_class c
-		JOIN pg_namespace n ON n.oid = c.relnamespace
+		LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
 		LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND
 		                            a.attname = 'tablespace_location'
 		WHERE c.relname = 'db_files_history' AND
@@ -113,7 +109,7 @@ BEGIN
 	THEN
 		EXECUTE FORMAT($fmt$ALTER TABLE arenadata_toolkit.db_files_history
 							RENAME TO %1$I;$fmt$,
-			to_char(now(), '"db_files_history_backup_"YYYYMMDD"T"HH24MISS'));
+			to_char(now(), '"db_files_history_backup_"YYYYMMDD"t"HH24MISS'));
 	END IF;
 END $$;
 

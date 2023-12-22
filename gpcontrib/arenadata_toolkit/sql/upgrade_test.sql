@@ -7,26 +7,24 @@ SET client_min_messages=WARNING;
 -- At this test we will be use first version and upgrade scripts.
 -- Field tablespace_location was added at version 1.4 of arenadata_toolkit
 -- Function returns set of successful checks.
-CREATE FUNCTION do_upgrade_test_for_arenadata_toolkit(
-	from_version TEXT, to_version TEXT)
+CREATE FUNCTION do_upgrade_test_for_arenadata_toolkit(from_version TEXT)
 RETURNS setof TEXT
 AS $$
 BEGIN
 
 -- Simple check: only create and alter extension:
 	CREATE EXTENSION arenadata_toolkit VERSION '1.0';
-	IF (from_version != '1.0')
+	IF from_version != '1.0'
 	THEN
 		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
 							UPDATE TO %1$I;$fmt$, from_version);
 	END IF;
-	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
-						UPDATE TO %1$I;$fmt$, to_version);
+	ALTER EXTENSION arenadata_toolkit UPDATE;
 
 -- Check the result
-	IF to_version = (SELECT extversion
-				     FROM pg_extension
-				     WHERE extname='arenadata_toolkit')
+	IF (SELECT default_version = installed_version
+		FROM pg_available_extensions
+		WHERE name='arenadata_toolkit')
 	THEN
 		RETURN NEXT from_version || ': only alter check';
 	END IF;
@@ -37,19 +35,18 @@ BEGIN
 
 -- Create, adb_create_tables and alter extension:
 	CREATE EXTENSION arenadata_toolkit VERSION '1.0';
-	IF (from_version != '1.0')
+	IF from_version != '1.0'
 	THEN
 		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
 							UPDATE TO %1$I;$fmt$, from_version);
 	END IF;
 	PERFORM arenadata_toolkit.adb_create_tables();
-	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
-						UPDATE TO %1$I;$fmt$, to_version);
+	ALTER EXTENSION arenadata_toolkit UPDATE;
 
 -- Check the result
-	IF to_version = (SELECT extversion
-				     FROM pg_extension
-				     WHERE extname='arenadata_toolkit')
+	IF (SELECT default_version = installed_version
+		FROM pg_available_extensions
+		WHERE name='arenadata_toolkit')
 	THEN
 		RETURN NEXT from_version || ': alter and create_tables check';
 	END IF;
@@ -60,20 +57,19 @@ BEGIN
 
 -- Create, adb_create_tables, adb_collect_table_stats and alter extension:
 	CREATE EXTENSION arenadata_toolkit VERSION '1.0';
-	IF (from_version != '1.0')
+	IF from_version != '1.0'
 	THEN
 		EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
 						UPDATE TO %1$I;$fmt$, from_version);
 	END IF;
 	PERFORM arenadata_toolkit.adb_create_tables();
 	PERFORM arenadata_toolkit.adb_collect_table_stats();
-	EXECUTE FORMAT($fmt$ALTER EXTENSION arenadata_toolkit
-						UPDATE TO %1$I;$fmt$, to_version);
+	ALTER EXTENSION arenadata_toolkit UPDATE;
 
 -- Check the result
-	IF to_version = (SELECT extversion
-				     FROM pg_extension
-				     WHERE extname='arenadata_toolkit')
+	IF (SELECT default_version = installed_version
+		FROM pg_available_extensions
+		WHERE name='arenadata_toolkit')
 	THEN
 		RETURN NEXT from_version || ': alter, create_tables and collect_table_stats check';
 	END IF;
@@ -82,42 +78,25 @@ BEGIN
 -- which were added at version 1.4
 	PERFORM arenadata_toolkit.adb_create_tables();
 
-	IF EXISTS (SELECT 1
-			   FROM information_schema.columns
-			   WHERE table_schema='arenadata_toolkit' AND
-			         table_name='db_files_current' AND
-			         column_name='tablespace_location')
+	IF 4 = (SELECT count(1)
+			FROM pg_class c
+			LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
+			LEFT JOIN pg_attribute a ON a.attrelid = c.oid AND
+			                            a.attname = 'tablespace_location'
+			WHERE n.nspname = 'arenadata_toolkit' AND
+			      c.relname IN ('db_files_current',
+			                    '__db_files_current',
+			                    '__db_files_current_unmapped',
+			                    'db_files_history') AND
+			      a.attrelid IS NOT NULL)
 	THEN
-		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.db_files_current check';
+		RETURN NEXT from_version || ': column tablespace_location check';
 	END IF;
-	IF EXISTS (SELECT 1
-			   FROM information_schema.columns
-			   WHERE table_schema='arenadata_toolkit' AND
-			         table_name='__db_files_current' AND
-			         column_name='tablespace_location')
-	THEN
-		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.__db_files_current check';
-	END IF;
-	IF EXISTS (SELECT 1
-				   FROM information_schema.columns
-				   WHERE table_schema='arenadata_toolkit' AND
-				         table_name='__db_files_current_unmapped' AND
-				         column_name='tablespace_location')
-	THEN
-		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.__db_files_current_unmapped check';
-	END IF;
-	IF EXISTS (SELECT 1
-			   FROM information_schema.columns
-			   WHERE table_schema='arenadata_toolkit' AND
-			         table_name='db_files_history' AND
-			         column_name='tablespace_location')
-	THEN
-		RETURN NEXT from_version || ': tablespace_location at arenadata_toolkit.db_files_history check';
-	END IF;
+
 	IF EXISTS (SELECT 1
 			   FROM pg_tables
 			   WHERE schemaname='arenadata_toolkit' AND
-			         tablename like 'db_files_history_backup%')
+			         tablename SIMILAR TO 'db_files_history_backup_[0-9]{8}t[0-9]{6}')
 	THEN
 		RETURN NEXT from_version || ': db_files_history_backup check';
 	END IF;
@@ -131,10 +110,9 @@ BEGIN
 	PERFORM arenadata_toolkit.adb_collect_table_stats();
 
 -- Check the result
-	IF EXISTS (SELECT 1
-			   FROM pg_available_extensions
-			   WHERE name='arenadata_toolkit' AND
-			         default_version=installed_version)
+	IF (SELECT default_version = installed_version
+		FROM pg_available_extensions
+		WHERE name='arenadata_toolkit')
 	THEN
 		RETURN NEXT from_version || ': create the latest check';
 	END IF;
@@ -146,30 +124,11 @@ BEGIN
 END$$
 LANGUAGE plpgsql;
 
-CREATE FUNCTION do_test_for_each_versions()
-RETURNS setof TEXT
-AS $$
-DECLARE
-	version RECORD;
-BEGIN
-	FOR version IN
-		SELECT *
-		FROM (VALUES ('1.0'),('1.1'),('1.2'),('1.3'))
-			AS from_versions
-	LOOP
-		RETURN QUERY SELECT do_upgrade_test_for_arenadata_toolkit(
-								version.column1::TEXT,
-								(SELECT default_version
-								 FROM pg_available_extensions
-								 WHERE name = 'arenadata_toolkit'))
-					 ORDER BY 1;
-	END LOOP;
-END$$
-LANGUAGE plpgsql;
-
-SELECT do_test_for_each_versions() ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.0') ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.1') ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.2') ORDER BY 1;
+SELECT do_upgrade_test_for_arenadata_toolkit('1.3') ORDER BY 1;
 
 -- Cleanup
-DROP FUNCTION do_test_for_each_versions();
-DROP FUNCTION do_upgrade_test_for_arenadata_toolkit(TEXT, TEXT);
+DROP FUNCTION do_upgrade_test_for_arenadata_toolkit(TEXT);
 RESET client_min_messages;

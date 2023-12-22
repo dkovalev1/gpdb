@@ -19,31 +19,10 @@ DISTRIBUTED REPLICATED;
 INSERT INTO table_at_pg_default SELECT generate_series(1,10);
 INSERT INTO table_at_custom_tblspc SELECT generate_series(1,10);
 
-SELECT
-	files.content,
-	files.table_name,
-	files.table_tablespace,
-	CASE
-		WHEN 'pg_default' = files.table_tablespace AND
-			 files.tablespace_location = gpconf.datadir || '/base'
-		THEN '<SEGMENT_BASE_DIR>/base'
-		WHEN 'pg_global' = files.table_tablespace AND
-			 files.tablespace_location = gpconf.datadir || '/global'
-		THEN '<SEGMENT_BASE_DIR>/global'
-		ELSE files.tablespace_location
-	END AS tablespace_location
-FROM arenadata_toolkit.__db_files_current files
-LEFT JOIN gp_segment_configuration gpconf
-		  ON gpconf.content = files.content AND
-		  gpconf.preferred_role = files.segment_preferred_role
-WHERE table_name IN ('table_at_pg_default',
-					 'table_at_custom_tblspc',
-					 'gp_segment_configuration') -- example of table at pg_global
-ORDER BY table_name, content;
-
 SELECT arenadata_toolkit.adb_collect_table_stats();
 
 SELECT
+	files.source_table_name,
 	files.content,
 	files.table_name,
 	files.table_tablespace,
@@ -56,36 +35,28 @@ SELECT
 		THEN '<SEGMENT_BASE_DIR>/global'
 		ELSE files.tablespace_location
 	END AS tablespace_location
-FROM arenadata_toolkit.db_files_current files
+FROM (SELECT '__db_files_current' source_table_name, content, table_name,
+	         table_tablespace, tablespace_location, segment_preferred_role::CHAR(1)
+	  FROM arenadata_toolkit.__db_files_current
+	  WHERE table_name IN ('table_at_pg_default', 'table_at_custom_tblspc',
+						   'gp_segment_configuration') -- example of table at pg_global
+	  UNION
+	  SELECT 'db_files_current' source_table_name, content, table_name,
+	         table_tablespace, tablespace_location, segment_preferred_role::CHAR(1)
+	  FROM arenadata_toolkit.db_files_current
+	  WHERE table_name IN ('table_at_pg_default', 'table_at_custom_tblspc',
+						   'gp_segment_configuration') -- example of table at pg_global
+	  UNION
+	  SELECT 'db_files_history' source_table_name, content, table_name,
+	         table_tablespace, tablespace_location, segment_preferred_role::CHAR(1)
+	  FROM arenadata_toolkit.db_files_history
+	  WHERE table_name IN ('table_at_pg_default', 'table_at_custom_tblspc',
+						   'gp_segment_configuration') -- example of table at pg_global
+	  ) files
 LEFT JOIN gp_segment_configuration gpconf
 		  ON gpconf.content = files.content AND
 		  gpconf.preferred_role = files.segment_preferred_role
-WHERE table_name IN ('table_at_pg_default',
-					 'table_at_custom_tblspc',
-					 'gp_segment_configuration') -- example of table at pg_global
-ORDER BY table_name, content;
-
-SELECT
-	files.content,
-	files.table_name,
-	files.table_tablespace,
-	CASE
-		WHEN 'pg_default' = files.table_tablespace AND
-			 files.tablespace_location = gpconf.datadir || '/base'
-		THEN '<SEGMENT_BASE_DIR>/base'
-		WHEN 'pg_global' = files.table_tablespace AND
-			 files.tablespace_location = gpconf.datadir || '/global'
-		THEN '<SEGMENT_BASE_DIR>/global'
-		ELSE files.tablespace_location
-	END AS tablespace_location
-FROM arenadata_toolkit.db_files_history files
-LEFT JOIN gp_segment_configuration gpconf
-		  ON gpconf.content = files.content AND
-		  gpconf.preferred_role = files.segment_preferred_role
-WHERE table_name IN ('table_at_pg_default',
-					 'table_at_custom_tblspc',
-					 'gp_segment_configuration') -- example of table at pg_global
-ORDER BY table_name, content;
+ORDER BY source_table_name, table_name, content;
 
 -- Cleanup
 DROP TABLE table_at_pg_default;

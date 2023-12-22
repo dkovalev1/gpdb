@@ -5,8 +5,8 @@ SET client_min_messages=WARNING;
 -- start_matchsubs
 -- m/(.*)prt_p\d{6}/
 -- s/(.*)prt_p\d{6}/$1prt_pYYYYMM/
--- m/(.*)backup_\d{8}T\d{6}/
--- s/(.*)backup_\d{8}T\d{6}/$1backup_YYYYMMDDTHHMMSS/
+-- m/(.*)backup_\d{8}t\d{6}/
+-- s/(.*)backup_\d{8}t\d{6}/$1backup_YYYYMMDDtHHMMSS/
 -- end_matchsubs
 -- function that mocks manual installation of arenadata_toolkit from bundle
 CREATE FUNCTION mock_manual_installation() RETURNS VOID AS $$
@@ -107,9 +107,9 @@ SELECT objname, objtype, objstorage, objacl FROM toolkit_objects_info ORDER BY o
  db_files_history                                           | table   | a          | {owner=arwdDxt/owner}
  db_files_history_1_prt_default_part                        | table   | a          | {owner=arwdDxt/owner}
  db_files_history_1_prt_pYYYYMM                             | table   | a          | {owner=arwdDxt/owner}
- db_files_history_backup_YYYYMMDDTHHMMSS                    | table   | a          | 
- db_files_history_backup_YYYYMMDDTHHMMSS_1_prt_default_part | table   | a          | 
- db_files_history_backup_YYYYMMDDTHHMMSS_1_prt_pYYYYMM      | table   | a          | 
+ db_files_history_backup_YYYYMMDDtHHMMSS                    | table   | a          | 
+ db_files_history_backup_YYYYMMDDtHHMMSS_1_prt_default_part | table   | a          | 
+ db_files_history_backup_YYYYMMDDtHHMMSS_1_prt_pYYYYMM      | table   | a          | 
  operation_exclude                                          | table   | a          | 
 (22 rows)
 
