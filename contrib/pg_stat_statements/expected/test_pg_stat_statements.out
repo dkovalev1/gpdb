@@ -1,0 +1,24 @@
+-- simple test to check there is no warnings during jumbling of the query
+CREATE TABLE table_test_pg_stat_statements
+(
+    item1 integer,
+    item2 integer,
+    item3 integer,
+    item4 integer
+)
+DISTRIBUTED BY (item1);
+SELECT   
+    sum(item4) as sum_item1
+   ,item2
+   ,grouping(item1)+grouping(item2) as item_1_2_grouping
+from
+    table_test_pg_stat_statements
+where
+    item3 = 0
+group by rollup(item1, item2);
+ sum_item1 | item2 | item_1_2_grouping 
+-----------+-------+-------------------
+           |       |                 2
+(1 row)
+
+DROP TABLE table_test_pg_stat_statements;
