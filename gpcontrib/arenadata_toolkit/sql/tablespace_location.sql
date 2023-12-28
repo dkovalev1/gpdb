@@ -68,4 +68,3 @@ DROP EXTENSION arenadata_toolkit;
 SET client_min_messages=WARNING;
 DROP SCHEMA arenadata_toolkit CASCADE;
 RESET client_min_messages;
-\! rm -rf /tmp/tblspace_location_test_dir
