@@ -509,6 +509,7 @@ explain SELECT * FROM csq_r WHERE exists (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (8 rows)
 
@@ -528,6 +529,7 @@ explain SELECT * FROM csq_r WHERE not exists (SELECT * FROM csq_f(csq_r.a));
          SubPlan 1  (slice1; segments: 3)
            ->  Result  (cost=0.00..0.00 rows=1 width=1)
                  ->  Result  (cost=0.00..0.00 rows=1 width=1)
+                       ->  Result  (cost=0.00..0.00 rows=1 width=1)
  Optimizer: Pivotal Optimizer (GPORCA) version 2.55.21
 (8 rows)
 
