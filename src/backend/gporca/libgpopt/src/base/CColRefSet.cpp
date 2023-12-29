@@ -131,7 +131,7 @@ CColRefSet::PcrFirst() const
 //		CColRefSet::PcrFirstUsed
 //
 //	@doc:
-//		Return first used member
+//		Return first used member or mark first element as used
 //
 //---------------------------------------------------------------------------
 CColRef *
