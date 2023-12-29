@@ -128,38 +128,6 @@ CColRefSet::PcrFirst() const
 
 //---------------------------------------------------------------------------
 //	@function:
-//		CColRefSet::PcrFirstUsed
-//
-//	@doc:
-//		Return first used member or mark first element as used
-//
-//---------------------------------------------------------------------------
-CColRef *
-CColRefSet::PcrFirstUsed() const
-{
-	CColRefSetIter crsi(*this);
-	while (crsi.Advance())
-	{
-		CColRef *pcr = crsi.Pcr();
-
-		if (CColRef::EUsed == pcr->GetUsage())
-		{
-			return pcr;
-		}
-	}
-
-	CColRef *pcr = PcrFirst();
-
-	if (NULL != pcr)
-	{
-		pcr->MarkAsUsed();
-	}
-
-	return pcr;
-}
-
-//---------------------------------------------------------------------------
-//	@function:
 //		CColRefSet::Include
 //
 //	@doc:
