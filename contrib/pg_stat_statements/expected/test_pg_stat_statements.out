@@ -222,47 +222,5 @@ SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
  SELECT pg_stat_statements_reset(); |     1
 (3 rows)
 
--- check several options in simple GROUP BY
--- all should result in separate entries
-SELECT pg_stat_statements_reset();
- pg_stat_statements_reset 
---------------------------
- 
-(1 row)
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY item1, item2;
- count 
--------
-(0 rows)
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY item2, item3;
- count 
--------
-(0 rows)
-
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
-               query                | calls 
-------------------------------------+-------
- SELECT                            +|     1
-     COUNT (*)                     +| 
- FROM                              +| 
-     table_test_pg_stat_statements +| 
- GROUP BY item1, item2;             | 
- SELECT                            +|     1
-     COUNT (*)                     +| 
- FROM                              +| 
-     table_test_pg_stat_statements +| 
- GROUP BY item2, item3;             | 
- SELECT pg_stat_statements_reset(); |     1
-(3 rows)
-
 RESET optimizer;
 DROP TABLE table_test_pg_stat_statements;

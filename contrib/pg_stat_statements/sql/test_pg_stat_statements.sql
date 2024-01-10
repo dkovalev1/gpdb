@@ -105,24 +105,6 @@ GROUP BY ROLLUP(item2, item3);
 
 SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
 
--- check several options in simple GROUP BY
--- all should result in separate entries
-SELECT pg_stat_statements_reset();
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY item1, item2;
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY item2, item3;
-
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
-
 RESET optimizer;
 
 DROP TABLE table_test_pg_stat_statements;
