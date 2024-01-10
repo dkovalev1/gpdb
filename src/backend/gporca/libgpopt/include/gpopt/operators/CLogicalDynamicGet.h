@@ -85,6 +85,9 @@ public:
 	// Derived Relational Properties
 	//-------------------------------------------------------------------------------------
 
+	// derive output columns
+	virtual CColRefSet *DeriveOutputColumns(CMemoryPool *mp,
+											CExpressionHandle &exprhdl);
 
 	// derive join depth
 	virtual ULONG
