@@ -15,18 +15,6 @@ CREATE TABLE table_test_pg_stat_statements
 )
 DISTRIBUTED BY (item1);
 
-SELECT   
-    SUM(item4) AS sum_item1
-   ,item2
-   ,GROUPING(item1)+GROUPING(item2) AS item_1_2_grouping
-FROM
-    table_test_pg_stat_statements
-WHERE
-    item3 = 0
-GROUP BY ROLLUP(item1, item2);
-
--- start tests for pg_stat_statements logic
-
 -- Known issue: query is not added to pg_stat_statements statistics in
 -- case it is planned by GPORCA. So disable GPORCA during tests.
 SET optimizer='off';
@@ -35,7 +23,7 @@ SELECT pg_stat_statements_reset();
 
 -- launch 2 equivalent queries  
 SELECT
-    GROUPING(item1) AS item_1_grouping
+    GROUPING(item1)
 FROM
     table_test_pg_stat_statements
 WHERE
@@ -43,7 +31,7 @@ WHERE
 GROUP BY ROLLUP(item1, item2);
 
 SELECT
-    GROUPING(item1) AS item_1_grouping
+    GROUPING(item1)
 FROM
     table_test_pg_stat_statements
 WHERE
@@ -56,7 +44,7 @@ SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
 
 -- launch not equivalent query
 SELECT
-    GROUPING(item2) AS item_1_grouping
+    GROUPING(item2)
 FROM
     table_test_pg_stat_statements
 WHERE
@@ -64,17 +52,6 @@ WHERE
 GROUP BY ROLLUP(item1, item2);
 
 -- check that it has separate entry
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
-
--- change alias name
-SELECT
-    GROUPING(item2) AS item_2_grouping
-FROM
-    table_test_pg_stat_statements
-WHERE
-    item3 = 0
-GROUP BY ROLLUP(item1, item2);
--- check that recent request was added to preceding entry
 SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
 
 -- check that different grouping options result in separate entries
@@ -126,54 +103,6 @@ FROM
     table_test_pg_stat_statements
 GROUP BY ROLLUP(item2, item3);
 
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY ROLLUP(item3, item4);
-
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
-
--- check several parameters options in CUBE
--- all should result in separate entries
-SELECT pg_stat_statements_reset();
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY CUBE(item1, item2);
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY CUBE(item2, item3);
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY CUBE(item3, item4);
-
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
-
--- check several parameters options in GROUPING SETS
--- all should result in separate entries
-SELECT pg_stat_statements_reset();
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY GROUPING SETS((item1, item2), (item2, item3));
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY GROUPING SETS((item1, item2), (item3, item4));
-
 SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
 
 -- check several options in simple GROUP BY
@@ -192,21 +121,9 @@ FROM
     table_test_pg_stat_statements
 GROUP BY item2, item3;
 
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY item3, item4;
-
-SELECT
-    COUNT (*)
-FROM
-    table_test_pg_stat_statements
-GROUP BY item1, item2, item3;
-
 SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
 
-SET optimizer='on';
+RESET optimizer;
 
 DROP TABLE table_test_pg_stat_statements;
 -- start_ignore

@@ -602,17 +602,17 @@ JumbleExpr(JumbleState *jstate, Node *node)
 				APP_JUMB(intVal(node));
 			}
 			break;
-		case T_GroupingFunc:
-			{
-				GroupingFunc *gf = (GroupingFunc *) node;
-				JumbleExpr(jstate, (Node *) gf->args);
-			}
-			break;
 		case T_GroupingClause:
 			{
 				GroupingClause *gc = (GroupingClause *) node;
 				APP_JUMB(gc->groupType);
 				JumbleExpr(jstate, (Node *) gc->groupsets);
+			}
+			break;
+		case T_GroupingFunc:
+			{
+				GroupingFunc *gf = (GroupingFunc *) node;
+				JumbleExpr(jstate, (Node *) gf->args);
 			}
 			break;
 		default:
