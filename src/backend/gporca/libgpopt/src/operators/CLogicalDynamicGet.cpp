@@ -102,7 +102,7 @@ CLogicalDynamicGet::~CLogicalDynamicGet()
 //---------------------------------------------------------------------------
 CColRefSet *
 CLogicalDynamicGet::DeriveOutputColumns(CMemoryPool *mp,
-											CExpressionHandle &	 // exprhdl
+										CExpressionHandle &	 // exprhdl
 )
 {
 	CColRefSet *pcrs = GPOS_NEW(mp) CColRefSet(mp);
