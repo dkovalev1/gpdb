@@ -1,7 +1,8 @@
 -- start_ignore
 \! gpconfig -c shared_preload_libraries -v 'pg_stat_statements';
-\! gpstop -raiq;
+\! gpstop -raq -M fast;
 \c
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 DROP TABLE IF EXISTS table_test_pg_stat_statements;
 -- end_ignore
 -- simple test to check there is no warnings during jumbling of the query
@@ -24,8 +25,191 @@ WHERE
     item3 = 0
 GROUP BY ROLLUP(item1, item2);
 
+-- start tests for pg_stat_statements logic
+
+-- Known issue: query is not added to pg_stat_statements statistics in
+-- case it is planned by GPORCA. So disable GPORCA during tests.
+SET optimizer='off';
+
+SELECT pg_stat_statements_reset();
+
+-- launch 2 equivalent queries  
+SELECT
+    GROUPING(item1) AS item_1_grouping
+FROM
+    table_test_pg_stat_statements
+WHERE
+    item3 = 0
+GROUP BY ROLLUP(item1, item2);
+
+SELECT
+    GROUPING(item1) AS item_1_grouping
+FROM
+    table_test_pg_stat_statements
+WHERE
+    item3 = 1
+GROUP BY ROLLUP(item1, item2);
+
+-- pg_stat_statements statistics should have 2 calls for 1 entry
+-- corresponding to the two preceding SELECT queries
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- launch not equivalent query
+SELECT
+    GROUPING(item2) AS item_1_grouping
+FROM
+    table_test_pg_stat_statements
+WHERE
+    item3 = 0
+GROUP BY ROLLUP(item1, item2);
+
+-- check that it has separate entry
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- change alias name
+SELECT
+    GROUPING(item2) AS item_2_grouping
+FROM
+    table_test_pg_stat_statements
+WHERE
+    item3 = 0
+GROUP BY ROLLUP(item1, item2);
+-- check that recent request was added to preceding entry
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- check that different grouping options result in separate entries
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY ROLLUP(item1, item2, item3, item4);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY CUBE(item1, item2, item3, item4);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY GROUPING SETS(item1, item2, item3, item4);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY GROUPING SETS((item1, item2), (item3, item4));
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY item1, item2, item3, item4;
+
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- check several parameters options in ROLLUP
+-- all should result in separate entries
+SELECT pg_stat_statements_reset();
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY ROLLUP(item1, item2);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY ROLLUP(item2, item3);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY ROLLUP(item3, item4);
+
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- check several parameters options in CUBE
+-- all should result in separate entries
+SELECT pg_stat_statements_reset();
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY CUBE(item1, item2);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY CUBE(item2, item3);
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY CUBE(item3, item4);
+
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- check several parameters options in GROUPING SETS
+-- all should result in separate entries
+SELECT pg_stat_statements_reset();
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY GROUPING SETS((item1, item2), (item2, item3));
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY GROUPING SETS((item1, item2), (item3, item4));
+
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+-- check several options in simple GROUP BY
+-- all should result in separate entries
+SELECT pg_stat_statements_reset();
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY item1, item2;
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY item2, item3;
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY item3, item4;
+
+SELECT
+    COUNT (*)
+FROM
+    table_test_pg_stat_statements
+GROUP BY item1, item2, item3;
+
+SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+
+SET optimizer='on';
+
 DROP TABLE table_test_pg_stat_statements;
 -- start_ignore
 \! gpconfig -r shared_preload_libraries;
-\! gpstop -raiq;
+\! gpstop -raq -M fast;
 -- end_ignore
