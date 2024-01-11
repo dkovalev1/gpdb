@@ -18,7 +18,7 @@ SELECT GROUPING (a) FROM t GROUP BY ROLLUP(a, b);
 SELECT GROUPING (b) FROM t GROUP BY ROLLUP(a, b);
 
 -- check that 2 queries have separate entries
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+SELECT query, calls FROM pg_stat_statements ORDER BY query;
 
 -- check that different grouping options result in separate entries
 SELECT COUNT (*) FROM t GROUP BY ROLLUP(a, b);
@@ -27,7 +27,7 @@ SELECT COUNT (*) FROM t GROUP BY GROUPING SETS(a, b);
 SELECT COUNT (*) FROM t GROUP BY GROUPING SETS((a), (a, b));
 SELECT COUNT (*) FROM t GROUP BY a, b;
 
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+SELECT query, calls FROM pg_stat_statements ORDER BY query;
 
 -- check several parameters options in ROLLUP
 -- all should result in separate entries
@@ -36,7 +36,7 @@ SELECT pg_stat_statements_reset();
 SELECT COUNT (*) FROM t GROUP BY ROLLUP(a, b);
 SELECT COUNT (*) FROM t GROUP BY ROLLUP(b);
 
-SELECT query, calls FROM pg_stat_statements ORDER BY QUERY;
+SELECT query, calls FROM pg_stat_statements ORDER BY query;
 
 RESET optimizer;
 
