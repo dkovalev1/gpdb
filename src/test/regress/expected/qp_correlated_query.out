@@ -3921,42 +3921,100 @@ CREATE TABLE offers (
 ) DISTRIBUTED BY (id);
 INSERT INTO offers SELECT 0, 0, '2023-01-01';
 CREATE TABLE contacts (
-    contact text,
+    contact int,
     id int,
     date date
 ) DISTRIBUTED BY (id) PARTITION BY RANGE(date) (START (date '2023-01-01') INCLUSIVE END (date '2023-02-01') EXCLUSIVE EVERY (INTERVAL '1 month'));
 NOTICE:  CREATE TABLE will create partition "contacts_1_prt_1" for table "contacts"
 INSERT INTO contacts SELECT '0', 0, '2023-01-01';
+SET optimizer_enforce_subplans = on;
 EXPLAIN (COSTS off, VERBOSE on)
 SELECT id FROM offers WHERE EXISTS (
-    SELECT id FROM contacts WHERE product = 0 OR contacts.id = offers.id
+    SELECT id FROM contacts WHERE id = 0
 );
-                                                 QUERY PLAN                                                 
-------------------------------------------------------------------------------------------------------------
- Gather Motion 3:1  (slice3; segments: 3)
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
    Output: offers.id
-   ->  HashAggregate
+   ->  Result
          Output: offers.id
-         Group Key: offers.ctid, offers.gp_segment_id
-         ->  Redistribute Motion 3:3  (slice2; segments: 3)
-               Output: offers.id, offers.ctid, offers.gp_segment_id
-               Hash Key: offers.ctid
-               ->  Nested Loop
-                     Output: offers.id, offers.ctid, offers.gp_segment_id
-                     Join Filter: ((offers.product = 0) OR (contacts_1_prt_1.id = offers.id))
-                     ->  Append
-                           ->  Seq Scan on qp_correlated_query.contacts_1_prt_1
-                                 Output: contacts_1_prt_1.id
-                     ->  Materialize
-                           Output: offers.id, offers.product, offers.ctid, offers.gp_segment_id
-                           ->  Broadcast Motion 3:3  (slice1; segments: 3)
-                                 Output: offers.id, offers.product, offers.ctid, offers.gp_segment_id
-                                 ->  Seq Scan on qp_correlated_query.offers
-                                       Output: offers.id, offers.product, offers.ctid, offers.gp_segment_id
+         One-Time Filter: $0
+         InitPlan 1 (returns $0)  (slice3)
+           ->  Limit
+                 Output: contacts_1_prt_1.id
+                 ->  Gather Motion 1:1  (slice1; segments: 1)
+                       Output: contacts_1_prt_1.id
+                       ->  Limit
+                             Output: contacts_1_prt_1.id
+                             ->  Append
+                                   ->  Seq Scan on qp_correlated_query.contacts_1_prt_1
+                                         Output: contacts_1_prt_1.id
+                                         Filter: (contacts_1_prt_1.id = 0)
+         ->  Seq Scan on qp_correlated_query.offers
+               Output: offers.id, offers.product, offers.date
  Optimizer: Postgres query optimizer
  Settings: optimizer=off
-(22 rows)
+(20 rows)
 
+CREATE INDEX ON contacts USING bitmap(id);
+EXPLAIN (COSTS off, VERBOSE on)
+SELECT id FROM offers WHERE EXISTS (
+    SELECT id FROM contacts WHERE id = 0
+);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: offers.id
+   ->  Result
+         Output: offers.id
+         One-Time Filter: $0
+         InitPlan 1 (returns $0)  (slice3)
+           ->  Limit
+                 Output: contacts_1_prt_1.id
+                 ->  Gather Motion 1:1  (slice1; segments: 1)
+                       Output: contacts_1_prt_1.id
+                       ->  Limit
+                             Output: contacts_1_prt_1.id
+                             ->  Append
+                                   ->  Seq Scan on qp_correlated_query.contacts_1_prt_1
+                                         Output: contacts_1_prt_1.id
+                                         Filter: (contacts_1_prt_1.id = 0)
+         ->  Seq Scan on qp_correlated_query.offers
+               Output: offers.id, offers.product, offers.date
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(20 rows)
+
+CREATE INDEX ON contacts USING btree(id);
+EXPLAIN (COSTS off, VERBOSE on)
+SELECT id FROM offers WHERE EXISTS (
+    SELECT id FROM contacts WHERE id = 0
+);
+                                       QUERY PLAN                                       
+----------------------------------------------------------------------------------------
+ Gather Motion 3:1  (slice2; segments: 3)
+   Output: offers.id
+   ->  Result
+         Output: offers.id
+         One-Time Filter: $0
+         InitPlan 1 (returns $0)  (slice3)
+           ->  Limit
+                 Output: contacts_1_prt_1.id
+                 ->  Gather Motion 1:1  (slice1; segments: 1)
+                       Output: contacts_1_prt_1.id
+                       ->  Limit
+                             Output: contacts_1_prt_1.id
+                             ->  Append
+                                   ->  Seq Scan on qp_correlated_query.contacts_1_prt_1
+                                         Output: contacts_1_prt_1.id
+                                         Filter: (contacts_1_prt_1.id = 0)
+         ->  Seq Scan on qp_correlated_query.offers
+               Output: offers.id, offers.product, offers.date
+ Optimizer: Postgres query optimizer
+ Settings: optimizer=off
+(20 rows)
+
+RESET optimizer_enforce_subplans;
 DROP TABLE offers;
 DROP TABLE contacts;
 -- ----------------------------------------------------------------------
